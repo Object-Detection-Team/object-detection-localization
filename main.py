@@ -39,4 +39,4 @@ webrtc_streamer(
     async_processing=True  # for a better experience
 )
 
-st.write("Note: 'yolov8n.pt' (nano) is used for the best performance.")
+st.write("Note: 'yolov8n.pt' (nano) is used for the best performance for now.")
