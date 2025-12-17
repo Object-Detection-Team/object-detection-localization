@@ -306,7 +306,7 @@ DEVICE, DEVICE_LABEL = get_device()
 def load_yolo_model():
     """Load YOLO model efficiently"""
     try:
-        model = YOLO("yolov8n.pt")
+        model = YOLO("./training_results/fruit_model_best.pt")
         model.to(DEVICE)
         model.fuse()  # Fuse layers for faster inference
         return model
