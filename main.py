@@ -2,7 +2,6 @@ import streamlit as st
 import av
 import torch
 import pandas as pd
-import numpy as np
 from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, WebRtcMode
 from ultralytics import YOLO
 
@@ -10,7 +9,7 @@ from ultralytics import YOLO
 # PAGE CONFIGURATION
 # ====================================================================
 st.set_page_config(
-    page_title="YOLOv8 AI Vision System",
+    page_title="Multi-Model YOLO Vision System",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -302,11 +301,18 @@ DEVICE, DEVICE_LABEL = get_device()
 # ====================================================================
 # OPTIMIZED MODEL LOADING
 # ====================================================================
+MODEL_CONFIG = {
+    "YOLOv8 (Balanced)": "./training_results/yolov8_fruits/weights_best.pt",
+    "YOLOv11 (High Accuracy)": "./training_results/yolo11_fruits/weights_best.pt",
+    "YOLOv5 (High Speed)": "./training_results/yolov5_fruits/weights_best.pt",
+    "YOLOv8 Nano (Default)": "./yolov8n.pt"  # Fallback/Default
+}
+
 @st.cache_resource(show_spinner=False)
-def load_yolo_model():
+def load_yolo_model(model_path):
     """Load YOLO model efficiently"""
     try:
-        model = YOLO("./training_results/fruit_model_best.pt")
+        model = YOLO(model_path)
         model.to(DEVICE)
         model.fuse()  # Fuse layers for faster inference
         return model
@@ -314,7 +320,7 @@ def load_yolo_model():
         st.error(f"Model loading error: {e}")
         return None
 
-MODEL = load_yolo_model()
+MODEL = None
 
 # ====================================================================
 # OPTIMIZED VIDEO PROCESSOR
@@ -352,7 +358,7 @@ def render_sidebar():
         st.markdown("""
             <div style='text-align: center; margin-bottom: 2rem;'>
                 <div style='font-size: 2.5rem; margin-bottom: 0.5rem;'>🎯</div>
-                <h3 style='margin: 0; color: #F5C453;'>AI Vision System</h3>
+                <h3 style='margin: 0; color: #F5C453;'>Multi-Model Vision</h3>
                 <p style='color: #9CA3AF; margin: 0.5rem 0 0 0; font-size: 0.9rem;'>
                     Real-Time Object Detection
                 </p>
@@ -379,6 +385,27 @@ def render_sidebar():
             st.rerun()
 
         st.divider()
+
+        # Model Selection
+        st.markdown(f"""
+            <div style='margin-bottom: 0.5rem;'>
+                <h4 style='color: #F5C453; margin: 0 0 0.5rem 0; font-size: 1rem;'>⚙️ Model Config</h4>
+            </div>
+        """, unsafe_allow_html=True)
+
+        selected_model_name = st.selectbox(
+            "Select AI Model",
+            list(MODEL_CONFIG.keys()),
+            index=0,
+            label_visibility="collapsed",
+            key="model_selection"
+        )
+        
+        # Load the selected model globally
+        global MODEL
+        MODEL = load_yolo_model(MODEL_CONFIG[selected_model_name])
+        
+        st.divider()
         
         # System Status
         st.markdown(f"""
@@ -390,7 +417,7 @@ def render_sidebar():
                 </div>
                 <div style='display: flex; justify-content: space-between; margin-bottom: 0.5rem;'>
                     <span style='color: #9CA3AF; font-size: 0.9rem;'>Model</span>
-                    <span style='color: #22C55E; font-weight: 600; font-size: 0.9rem;'>YOLOv8n</span>
+                    <span style='color: #22C55E; font-weight: 600; font-size: 0.9rem;'>{selected_model_name.split()[0]}</span>
                 </div>
                 <div style='display: flex; justify-content: space-between;'>
                     <span style='color: #9CA3AF; font-size: 0.9rem;'>Status</span>
@@ -416,7 +443,7 @@ def render_sidebar():
 # PROJECT OVERVIEW PAGE - Optimized
 # ====================================================================
 def render_project_overview():
-    st.markdown("<h1>YOLOv8 Real-Time Object Detection</h1>", unsafe_allow_html=True)
+    st.markdown("<h1>Multi-Model YOLO Vision System</h1>", unsafe_allow_html=True)
     
     # 1. Project Introduction
     st.markdown("""
@@ -436,7 +463,7 @@ def render_project_overview():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.metric(label="Model", value="YOLOv8n", delta="COCO Pretrained")
+        st.metric(label="Model", value="Multi-Model", delta="YOLO v5/v8/v11")
     
     with col2:
         st.metric(label="Object Classes", value="80+", delta="Classes")
@@ -451,7 +478,7 @@ def render_project_overview():
         <div class='dark-card'>
             <div style='display: flex; flex-wrap: wrap; gap: 0.5rem;'>
                 <span class='tech-badge'>Python</span>
-                <span class='tech-badge'>YOLOv8</span>
+                <span class='tech-badge'>YOLO (v5/v8/v11)</span>
                 <span class='tech-badge'>Streamlit</span>
                 <span class='tech-badge'>PyTorch</span>
                 <span class='tech-badge'>OpenCV</span>
@@ -461,7 +488,52 @@ def render_project_overview():
     """, unsafe_allow_html=True)
     
     # 4. Methodology
-    st.markdown("<h2>Methodology</h2>", unsafe_allow_html=True)
+    st.markdown("<h2>Methodology & Performance</h2>", unsafe_allow_html=True)
+
+    # Performance Comparison Section
+    st.markdown("""
+        <div class='dark-card'>
+            <h3>🏆 Model Performance Comparison</h3>
+            <p>We trained and compared three different YOLO architectures on the same dataset. Here are the results:</p>
+            <table style="width:100%; color: #D1D5DB; border-collapse: collapse;">
+                <tr style="border-bottom: 2px solid #F5C453;">
+                    <th style="padding: 10px; text-align: left; color: #F5C453;">Model Architecture</th>
+                    <th style="padding: 10px; text-align: center; color: #F5C453;">Accuracy (mAP50)</th>
+                    <th style="padding: 10px; text-align: center; color: #F5C453;">Recall</th>
+                    <th style="padding: 10px; text-align: center; color: #F5C453;">Speed (Inference)</th>
+                    <th style="padding: 10px; text-align: center; color: #F5C453;">Training Time</th>
+                    <th style="padding: 10px; text-align: left; color: #F5C453;">Best Use Case</th>
+                </tr>
+                <tr style="border-bottom: 1px solid #1F2933;">
+                    <td style="padding: 10px;"><strong>YOLOv11 Medium</strong> <span style="color:#22C55E">★ Winner</span></td>
+                    <td style="padding: 10px; text-align: center;"><strong>77.8%</strong></td>
+                    <td style="padding: 10px; text-align: center;"><strong>75.5%</strong></td>
+                    <td style="padding: 10px; text-align: center;">12.8 ms</td>
+                    <td style="padding: 10px; text-align: center;">~1.49 hrs</td>
+                    <td style="padding: 10px;">High-Accuracy Applications</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #1F2933;">
+                    <td style="padding: 10px;"><strong>YOLOv5 Medium</strong> <span style="color:#3B82F6">⚡ Fastest</span></td>
+                    <td style="padding: 10px; text-align: center;">76.7%</td>
+                    <td style="padding: 10px; text-align: center;">72.1%</td>
+                    <td style="padding: 10px; text-align: center;"><strong>10.4 ms</strong></td>
+                    <td style="padding: 10px; text-align: center;">~1.25 hrs</td>
+                    <td style="padding: 10px;">Real-Time / Heavy Load</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px;"><strong>YOLOv8 Medium</strong></td>
+                    <td style="padding: 10px; text-align: center;">76.5%</td>
+                    <td style="padding: 10px; text-align: center;">74.8%</td>
+                    <td style="padding: 10px; text-align: center;">11.6 ms</td>
+                    <td style="padding: 10px; text-align: center;">~1.72 hrs</td>
+                    <td style="padding: 10px;">Balanced Performance</td>
+                </tr>
+            </table>
+            <p style="margin-top: 1rem; font-size: 0.85rem; color: #9CA3AF;">
+                * Comparison based on 50 epochs training on Google Colab T4 GPU.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
@@ -470,12 +542,12 @@ def render_project_overview():
             <div class='dark-card'>
                 <h3>Dataset & Model</h3>
                 <ul>
-                    <li><strong>Dataset:</strong> Frute-262 dataset</li>
-                    <li><strong>Selected Classes:</strong> 12 fruit classes</li>
-                    <li><strong>Samples:</strong> 100 images per class</li>
-                    <li><strong>Total:</strong> 1,200 images sampled</li>
-                    <li><strong>Model:</strong> YOLOv8 Nano</li>
-                    <li><strong>Pre-trained:</strong> COCO dataset weights</li>
+                    <li><strong>Dataset:</strong> Fruit Classification dataset</li>
+                    <li><strong>Selected Classes:</strong> 9 fruit classes</li>
+                    <li><strong>Samples:</strong> ~3,000 images total</li>
+                    <li><strong>Train/Val:</strong> 2697 train, 187 val</li>
+                    <li><strong>Model:</strong> Multi-Architecture YOLO</li>
+                    <li><strong>Weights:</strong> Custom trained weights</li>
                 </ul>
             </div>
         """, unsafe_allow_html=True)
@@ -485,7 +557,7 @@ def render_project_overview():
             <div class='dark-card'>
                 <h3>Deployment & Tools</h3>
                 <ul>
-                    <li><strong>Framework:</strong> Ultralytics YOLOv8</li>
+                    <li><strong>Framework:</strong> Ultralytics Multi-Model</li>
                     <li><strong>Interface:</strong> Streamlit Web Interface</li>
                     <li><strong>Processing:</strong> OpenCV + PyTorch</li>
                     <li><strong>Streaming:</strong> WebRTC real-time</li>
@@ -504,7 +576,13 @@ def render_project_overview():
             <div class='team-card'>
                 <span class='team-emoji'>👨‍💻</span>
                 <h4>Abdelrahman MOHAMED</h4>
-                <p>Lead Developer</p>
+                <p style="color: #F5C453; font-weight: bold;">YOLOv5 Specialist & Web Dev.</p>
+                <div style="text-align: left; margin-top: 0.5rem; font-size: 0.8rem; color: #D1D5DB;">
+                    • Trained YOLOv5 Model<br>
+                    • Analyzed YOLOv5 Metric Results<br>
+                    • Developed Web Interface<br>
+                    • Front-end Integration
+                </div>
             </div>
         """, unsafe_allow_html=True)
     
@@ -513,7 +591,14 @@ def render_project_overview():
             <div class='team-card'>
                 <span class='team-emoji'>👨‍🔬</span>
                 <h4>Ramazan YILDIZ</h4>
-                <p>Vision Engineer</p>
+                <p style="color: #F5C453; font-weight: bold;">Project Planning & AI Research</p>
+                <div style="text-align: left; margin-top: 0.5rem; font-size: 0.8rem; color: #D1D5DB;">
+                    • Trained YOLOv8m & YOLOv8n Models<br>
+                    • Project Initialization & Prep<br>
+                    • Research & Dataset Preparation<br>
+                    • Technical Documentation<br>
+                    • Model Comparison Analysis<br>
+                </div>
             </div>
         """, unsafe_allow_html=True)
     
@@ -522,7 +607,13 @@ def render_project_overview():
             <div class='team-card'>
                 <span class='team-emoji'>👩‍💼</span>
                 <h4>Beyza GÜLER</h4>
-                <p>Data Specialist</p>
+                <p style="color: #F5C453; font-weight: bold;">YOLOv11 Specialist & Reporting</p>
+                <div style="text-align: left; margin-top: 0.5rem; font-size: 0.8rem; color: #D1D5DB;">
+                    • Trained YOLOv11 Model<br>
+                    • Analyzed YOLOv11 Metric Results<br>
+                    • Technical Documentation<br>
+                    • Presentation Slides Design<br>
+                </div>
             </div>
         """, unsafe_allow_html=True)
     
@@ -534,12 +625,12 @@ def render_project_overview():
     with roadmap_col1:
         st.markdown("""
             <div class='dark-card'>
-                <h3>✅ Phase 1 (Current)</h3>
+                <h3>✅ Phase 1: Research & Training</h3>
                 <ul>
-                    <li>Dataset sampling completed</li>
-                    <li>Prototype system deployed</li>
-                    <li>Real-time detection working</li>
-                    <li>Web interface established</li>
+                    <li>Utilized Pre-labeled Dataset (9 Classes)</li>
+                    <li>Trained Multi-Model Architecture</li>
+                    <li>Evaluated YOLOv5 vs v8 vs v11</li>
+                    <li>Captured Performance Metrics</li>
                 </ul>
             </div>
         """, unsafe_allow_html=True)
@@ -547,12 +638,12 @@ def render_project_overview():
     with roadmap_col2:
         st.markdown("""
             <div class='dark-card'>
-                <h3>⏳ Phase 2 (Next)</h3>
+                <h3>✅ Phase 2: Deployment (Complete)</h3>
                 <ul>
-                    <li>Image annotation & labeling</li>
-                    <li>Model fine-tuning on dataset</li>
-                    <li>Quantitative evaluation</li>
-                    <li>Performance optimization</li>
+                    <li>Built Streamlit Web Interface</li>
+                    <li>Integrated Real-Time WebRTC</li>
+                    <li>Implemented Model Switching</li>
+                    <li>Final System Validation</li>
                 </ul>
             </div>
         """, unsafe_allow_html=True)
@@ -562,7 +653,7 @@ def render_project_overview():
         <div class='dark-card' style='text-align: center; border-color: #F5C453;'>
             <h3 style='margin-bottom: 1rem;'>🚀 Ready to Experience AI Vision?</h3>
             <p style='margin-bottom: 1.5rem;'>
-                Activate your webcam and see YOLOv8 in real-time action
+                Activate your webcam and see Multi-Model YOLO in real-time action
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -600,8 +691,12 @@ def render_live_detection():
     st.markdown("<br>", unsafe_allow_html=True)
     
     try:
+        # Use a dynamic key based on the model to force Streamlit to recreate 
+        # the streamer when the model changes
+        model_key = f"yolo_detection_{st.session_state.get('model_selection', 'default')}"
+        
         webrtc_ctx = webrtc_streamer(
-            key="yolov8_detection",
+            key=model_key,
             video_processor_factory=YOLOv8VideoProcessor,
             media_stream_constraints={"video": True, "audio": False},
             async_processing=True,
@@ -635,11 +730,11 @@ def render_live_detection():
             <div class='dark-card'>
                 <h3>📋 Detection Capabilities</h3>
                 <ul>
-                    <li>People, animals, vehicles</li>
-                    <li>Furniture, electronics</li>
-                    <li>Food items, bottles</li>
-                    <li>Sports equipment</li>
-                    <li>80+ object classes total</li>
+                    <li>Apple, Banana, Orange</li>
+                    <li>Grapes, Kiwi, Mango</li>
+                    <li>Pineapple, Watermelon</li>
+                    <li>Sugerapple</li>
+                    <li><strong>9 Fruit Classes Total</strong></li>
                 </ul>
             </div>
         """, unsafe_allow_html=True)
