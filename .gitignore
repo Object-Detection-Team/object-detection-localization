@@ -11,3 +11,4 @@ runs/
 
 # Notebook checkpoints
 .ipynb_checkpoints/
+.venv/
