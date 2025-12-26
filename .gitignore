@@ -1,0 +1,13 @@
+# YOLO / ML outputs
+*.pt
+training_results/
+unlabeled-data/
+runs/
+.cache/
+
+# Large datasets
+**/images/
+**/labels/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
