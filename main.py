@@ -2,8 +2,11 @@ import streamlit as st
 import av
 import torch
 import pandas as pd
-from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, WebRtcMode
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, WebRtcMode, RTCConfiguration
 from ultralytics import YOLO
+from dataclasses import dataclass, field
+from threading import Lock
+from pathlib import Path
 
 # ====================================================================
 # PAGE CONFIGURATION
@@ -14,6 +17,54 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ====================================================================
+# THREAD-SAFE INFERENCE SETTINGS
+# ====================================================================
+@dataclass
+class InferenceSettings:
+    """Thread-safe container for inference parameters."""
+    conf: float = 0.05
+    iou: float = 0.45
+    _lock: Lock = field(default_factory=Lock, repr=False)
+
+    def update(self, conf: float, iou: float) -> None:
+        """Safely update settings from UI thread."""
+        conf = float(max(0.0, min(1.0, conf)))
+        iou = float(max(0.0, min(1.0, iou)))
+        with self._lock:
+            self.conf = conf
+            self.iou = iou
+
+    def snapshot(self) -> tuple:
+        """Safely read current settings from video processor thread."""
+        with self._lock:
+            return self.conf, self.iou
+
+# ====================================================================
+# ROBUST INIT - CRITICAL FIX
+# ====================================================================
+def init_app_state():
+    """Initialize all session state variables safely."""
+    # 1. State for page navigation
+    if 'page_selection' not in st.session_state:
+        st.session_state.page_selection = "🏠 Overview"
+    
+    # 2. State for sliders (primitive values)
+    if "conf_threshold" not in st.session_state:
+        st.session_state["conf_threshold"] = 0.05
+    if "iou_threshold" not in st.session_state:
+        st.session_state["iou_threshold"] = 0.45
+        
+    # 3. State for thread-safe settings object
+    if "inference_settings" not in st.session_state:
+        st.session_state["inference_settings"] = InferenceSettings(
+            conf=st.session_state["conf_threshold"], 
+            iou=st.session_state["iou_threshold"]
+        )
+
+# Call immediately
+init_app_state()
 
 # ====================================================================
 # OPTIMIZED DARK THEME - Fast & Professional
@@ -83,11 +134,11 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
         border: 1px solid #1F2933 !important;
         margin-bottom: 1.25rem !important;
-        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+        transition: all 0.3s ease-in-out !important;
     }
     
     .dark-card:hover {
-        transform: translateY(-4px) !important;
+        transform: translateY(-3px) !important;
         box-shadow: 0 8px 24px rgba(245, 196, 83, 0.15) !important;
         border-color: rgba(245, 196, 83, 0.3) !important;
     }
@@ -122,7 +173,7 @@ st.markdown("""
         font-size: 1rem !important;
         font-weight: 600 !important;
         border-radius: 10px !important;
-        transition: all 0.2s ease !important;
+        transition: all 0.25s ease-in-out !important;
     }
     
     .stButton > button:hover {
@@ -132,7 +183,7 @@ st.markdown("""
         transform: translateY(-2px) !important;
     }
     
-    /* Sidebar */
+    /* Sidebar - Enhanced with better spacing and transitions */
     [data-testid="stSidebar"] {
         background: #0B1120 !important;
         border-right: 1px solid #1F2933 !important;
@@ -144,27 +195,35 @@ st.markdown("""
         padding: 0.75rem 1rem !important;
         border: 1px solid #1F2933 !important;
         color: #E5E7EB !important;
-        transition: all 0.2s ease !important;
-        margin: 0.25rem 0 !important;
+        transition: all 0.3s ease-in-out !important;
+        margin: 0.35rem 0 !important;
     }
     
     [data-testid="stSidebar"] .stRadio > div > label:hover {
         background: rgba(245, 196, 83, 0.05) !important;
         border-color: rgba(245, 196, 83, 0.3) !important;
+        transform: translateX(2px) !important;
     }
     
     [data-testid="stSidebar"] .stRadio > div > label[data-baseweb="radio"]:has(input:checked) {
-        background: rgba(245, 196, 83, 0.1) !important;
+        background: rgba(245, 196, 83, 0.12) !important;
         border-left: 3px solid #F5C453 !important;
         border-color: #F5C453 !important;
         color: #F9FAFB !important;
         font-weight: 600 !important;
+        box-shadow: 0 0 12px rgba(245, 196, 83, 0.15) !important;
     }
     
-    /* Video */
+    /* Video - Enhanced container with subtle depth */
     video {
         border-radius: 12px !important;
         border: 2px solid #1F2933 !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+        transition: all 0.25s ease-in-out !important;
+    }
+    
+    video:hover {
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(245, 196, 83, 0.1) !important;
     }
     
     /* Text */
@@ -225,12 +284,12 @@ st.markdown("""
         background: #0F172A;
         border: 1px solid #1F2933;
         border-radius: 12px;
-        transition: all 0.2s ease !important;
+        transition: all 0.3s ease-in-out !important;
         height: 100%;
     }
     
     .team-card:hover {
-        transform: translateY(-4px) !important;
+        transform: translateY(-3px) !important;
         box-shadow: 0 8px 20px rgba(245, 196, 83, 0.15) !important;
         border-color: rgba(245, 196, 83, 0.3) !important;
     }
@@ -280,6 +339,53 @@ st.markdown("""
         border-color: #1F2933 !important;
         color: #F9FAFB !important;
     }
+    
+    /* Sliders - Enhanced for premium feel */
+    .stSlider > div > div > div {
+        background: #1F2933 !important;
+    }
+    
+    .stSlider > div > div > div > div {
+        background: linear-gradient(135deg, #F5C453 0%, #d4a947 100%) !important;
+        box-shadow: 0 2px 8px rgba(245, 196, 83, 0.3) !important;
+    }
+    
+    /* Slider thumb enhancement */
+    .stSlider [role="slider"] {
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+    
+    .stSlider [role="slider"]:hover {
+        box-shadow: 0 3px 10px rgba(245, 196, 83, 0.4) !important;
+    }
+    
+    /* Subtle pulse animation for value updates */
+    @keyframes subtle-pulse {
+        0%, 100% { 
+            opacity: 1;
+            transform: scale(1);
+        }
+        50% { 
+            opacity: 0.95;
+            transform: scale(0.99);
+        }
+    }
+    
+    /* Expander refinements */
+    .streamlit-expanderHeader {
+        transition: all 0.3s ease-in-out !important;
+    }
+    
+    .streamlit-expanderHeader:hover {
+        background: rgba(245, 196, 83, 0.03) !important;
+    }
+    
+    /* Divider spacing enhancement */
+    hr {
+        margin: 1.5rem 0 !important;
+        opacity: 0.6 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -301,24 +407,45 @@ DEVICE, DEVICE_LABEL = get_device()
 # ====================================================================
 # OPTIMIZED MODEL LOADING
 # ====================================================================
+# ====================================================================
+# OPTIMIZED MODEL LOADING
+# ====================================================================
 MODEL_CONFIG = {
-    "YOLOv8 (Balanced)": "./training_results/yolov8_fruits/weights_best.pt",
-    "YOLOv11 (High Accuracy)": "./training_results/yolo11_fruits/weights_best.pt",
-    "YOLOv5 (High Speed)": "./training_results/yolov5_fruits/weights_best.pt",
-    "YOLOv8 Nano (Default)": "./yolov8n.pt"  # Fallback/Default
+    "YOLOv8 (Balanced)": Path("training_results") / "yolov8_fruits" / "weights_best.pt",
+    "YOLOv11 (High Accuracy)": Path("training_results") / "yolo11_fruits" / "weights_best.pt",
+    "YOLOv5 (High Speed)": Path("training_results") / "yolov5_fruits" / "yolov5_fruits" / "weights_best.pt",
+    "YOLOv8 Nano (Default)": Path("yolov8n.pt")
 }
 
 @st.cache_resource(show_spinner=False)
 def load_yolo_model(model_path):
-    """Load YOLO model efficiently"""
+    """Load YOLO model efficiently with fallback logic."""
+    path_obj = Path(model_path)
+    
+    # 1. Validate existence
+    if not path_obj.exists():
+        st.warning(f"⚠️ Weights file not found: `{path_obj}`. Falling back to default YOLOv8n model.")
+        path_obj = Path("yolov8n.pt")
+    
     try:
-        model = YOLO(model_path)
+        # 2. Prevent loading YOLOv5 weights with YOLOv8/11 loader if incompatible
+        # Ultralytics can load some YOLOv5 models but not all. 
+        # If it fails, we catch it below.
+        model = YOLO(str(path_obj))
         model.to(DEVICE)
-        model.fuse()  # Fuse layers for faster inference
+        
+        # 3. Fuse for speed
+        if hasattr(model, 'fuse'):
+            model.fuse()
+            
         return model
     except Exception as e:
-        st.error(f"Model loading error: {e}")
-        return None
+        st.error(f"Error loading model `{path_obj}`: {e}. using default fallback.")
+        try:
+            return YOLO("yolov8n.pt")
+        except Exception as e2:
+            st.error(f"Critical: Failed to load fallback model: {e2}")
+            return None
 
 MODEL = None
 
@@ -326,10 +453,10 @@ MODEL = None
 # OPTIMIZED VIDEO PROCESSOR
 # ====================================================================
 class YOLOv8VideoProcessor(VideoProcessorBase):
-    def __init__(self):
+    def __init__(self, settings: InferenceSettings):
         super().__init__()
         self.model = MODEL
-        self.conf_threshold = 0.5
+        self.settings = settings
         
     def recv(self, frame):
         if self.model is None:
@@ -337,9 +464,12 @@ class YOLOv8VideoProcessor(VideoProcessorBase):
             
         try:
             img = frame.to_ndarray(format="bgr24")
-            # Optimized inference with minimal settings
+            # Get current settings safely from the settings object
+            conf, iou = self.settings.snapshot()
+            # Optimized inference with user-controlled conf and iou
             results = self.model(img, 
-                               conf=self.conf_threshold,
+                               conf=conf,
+                               iou=iou,
                                verbose=False,
                                max_det=10,  # Limit detections for speed
                                imgsz=480)   # Smaller size for faster processing
@@ -404,6 +534,56 @@ def render_sidebar():
         # Load the selected model globally
         global MODEL
         MODEL = load_yolo_model(MODEL_CONFIG[selected_model_name])
+        
+        st.divider()
+        
+        # Inference Settings
+        st.markdown(f"""
+            <div style='margin-bottom: 0.5rem;'>
+                <h4 style='color: #F5C453; margin: 0 0 0.5rem 0; font-size: 1rem;'>🛠️ Inference Settings</h4>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        with st.expander("Adjust Thresholds", expanded=True):
+            # Sliders use session state keys directly (initialized in init_app_state)
+            conf_val = st.slider(
+                "Confidence Threshold",
+                min_value=0.00,
+                max_value=1.00,
+                value=st.session_state["conf_threshold"],
+                step=0.01,
+                help="Minimum confidence to show a detection. Lower values show more detections.",
+                key="conf_slider"
+            )
+            
+            iou_val = st.slider(
+                "IoU Threshold",
+                min_value=0.00,
+                max_value=1.00,
+                value=st.session_state["iou_threshold"],
+                step=0.01,
+                help="NMS IoU threshold; lower values remove more overlapping boxes.",
+                key="iou_slider"
+            )
+            
+            # Update both session state keys AND settings object
+            st.session_state["conf_threshold"] = conf_val
+            st.session_state["iou_threshold"] = iou_val
+            st.session_state["inference_settings"].update(conf_val, iou_val)
+            
+            # Display current values
+            st.markdown(f"""
+                <div style='margin-top: 0.75rem; padding: 0.75rem; background: rgba(245, 196, 83, 0.05); border-radius: 8px; border: 1px solid rgba(245, 196, 83, 0.2);'>
+                    <div style='display: flex; justify-content: space-between; margin-bottom: 0.25rem;'>
+                        <span style='color: #9CA3AF; font-size: 0.85rem;'>Confidence:</span>
+                        <span style='color: #F5C453; font-weight: 600; font-size: 0.85rem;'>{{conf_val:.2f}}</span>
+                    </div>
+                    <div style='display: flex; justify-content: space-between;'>
+                        <span style='color: #9CA3AF; font-size: 0.85rem;'>IoU:</span>
+                        <span style='color: #F5C453; font-weight: 600; font-size: 0.85rem;'>{{iou_val:.2f}}</span>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
         
         st.divider()
         
@@ -693,18 +873,29 @@ def render_live_detection():
     try:
         # Use a dynamic key based on the model to force Streamlit to recreate 
         # the streamer when the model changes
+        # Create a dynamic key to force streamer reset on model change
         model_key = f"yolo_detection_{st.session_state.get('model_selection', 'default')}"
+        
+        # CRITICAL FIX: Capture settings object here in main thread
+        # Do NOT access st.session_state inside the factory function
+        current_settings = st.session_state["inference_settings"]
+        
+        def video_processor_factory():
+            return YOLOv8VideoProcessor(settings=current_settings)
         
         webrtc_ctx = webrtc_streamer(
             key=model_key,
-            video_processor_factory=YOLOv8VideoProcessor,
+            video_processor_factory=video_processor_factory,
             media_stream_constraints={"video": True, "audio": False},
             async_processing=True,
             mode=WebRtcMode.SENDRECV,
             rtc_configuration={
                 "iceServers": [
                     {"urls": ["stun:stun.l.google.com:19302"]},
-                    {"urls": ["stun:stun1.l.google.com:19302"]}
+                    {"urls": ["stun:stun1.l.google.com:19302"]},
+                    {"urls": ["stun:stun2.l.google.com:19302"]},
+                    {"urls": ["stun:stun3.l.google.com:19302"]},
+                    {"urls": ["stun:stun4.l.google.com:19302"]},
                 ]
             }
         )
@@ -846,10 +1037,7 @@ def render_analytics_dashboard():
 # MAIN APPLICATION
 # ====================================================================
 def main():
-    # Initialize session state
-    if 'page_selection' not in st.session_state:
-        st.session_state.page_selection = "🏠 Overview"
-    
+    # Session state is guaranteed to be initialized by init_app_state() call at top of file
     render_sidebar()
     
     try:
