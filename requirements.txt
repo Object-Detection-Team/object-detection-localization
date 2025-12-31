@@ -1,6 +1,5 @@
 streamlit
 streamlit-webrtc
-av
-torch
 ultralytics
-opencv-python
+av
+pandas

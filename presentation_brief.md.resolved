@@ -1,0 +1,37 @@
+# Project Presentation Brief
+**Topic:** Comparing YOLO Architectures for Fruit Detection
+**Audience:** Classmates & Instructor
+
+## 1. Introduction (The Hook)
+> "We trained three generations of AI to see if 'Newer' always means 'Better'."
+
+- **What we did:** We took a database of 9 different fruits (Apples, Bananas, Kiwis...) and trained three different versions of the famous **YOLO (You Only Look Once)** algorithm: v5, v8, and the brand new v11.
+- **Why it matters:** Object detection is used everywhere—from self-driving cars to cashier-less stores.
+
+## 2. The Contenders
+- **YOLOv5 (The Veteran):** Released in 2020. Known for being fast and reliable.
+- **YOLOv8 (The Standard):** Released in 2023. The current industry standard.
+- **YOLOv11 (The Newcomer):** Released recently. Promises state-of-the-art accuracy.
+
+## 3. The Results (Simplified)
+We trained them all on the same computer (Google Colab T4 GPU) for the same amount of time. Here is what we found:
+
+### 🥇 The Accuracy Champion: YOLOv11
+- **Why?** It found the most fruit! It had the highest **Recall**, meaning it rarely missed a piece of fruit in the image.
+- **Score:** 78% Accuracy (mAP50).
+
+### ⚡ The Speed Demon: YOLOv5
+- **Why?** It was the fastest to process images (10ms per image vs 13ms for v11).
+- **Surprise:** It also had the highest **Precision**, meaning when it said "That's an apple," it was almost always right.
+
+## 4. Visuals for Your Slides
+*Recommend showing these images from your `training_results` folder:*
+
+1.  **Slide 1: The Problem.** Show a sample image with complex fruit arrangements.
+2.  **Slide 2: The Confusion Matrix (YOLOv11).** Show where the model gets confused (e.g., mistaking Oranges for Apples?).
+3.  **Slide 3: The Result Bar Chart.** A simple bar chart showing the 3 models side-by-side.
+    - YOLOv5: ⚡ Fastest
+    - YOLOv11: 🎯 Most Accurate
+
+## 5. Conclusion
+"Newer is indeed better for accuracy, but older models like YOLOv5 are still incredibly competitive if you need raw speed. For our Fruit Detection app, we would choose **YOLOv11** because we don't want to miss a single fruit."

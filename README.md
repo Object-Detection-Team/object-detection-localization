@@ -97,7 +97,7 @@ We rigorously trained and tested three architectures on the Fruit Classification
 
 ## 👥 Development Team
 
-Built with ❤️ by **Team 6** (Ataturk University - Computer Vision Lab):
+Built by **Team 6** (Ataturk University - Introduction to Artificial Intelligence):
 
 *   **👨‍🔬 Ramazan YILDIZ** - Project Planning & AI Research
 *   **👨‍💻 Abdelrahman MOHAMED** - YOLOv5 Specialist & Web Dev.
