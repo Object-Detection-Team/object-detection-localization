@@ -1,8 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# macOS
+.DS_Store
+
 # YOLO / ML outputs
 *.pt
-training_results/*
-!training_results/yolo11_fruits/
-!training_results/yolo11_fruits/**
-unlabeled-data/
 runs/
 .cache/
+
+# IDE
+.idea/
+
+# Project specific - keep in local only
+slaytlar/
+*.pptx
+PROJECT_STRUCTURE.md
+final_report.md
+inspect_pptx.py
+intermediate-report-team-6.pdf
+project-proposal-t6.pdf
+presentation_brief.md.resolved
+unlabeled-data/
+
+# Training results - only keep specific folders
+training_results/*
+!training_results/yolov5_fruits/
+!training_results/yolov5_fruits/**
+!training_results/yolov8_fruits/
+!training_results/yolov8_fruits/**
+!training_results/yolo11_fruits/
+!training_results/yolo11_fruits/**
