@@ -1,14 +1,8 @@
 # YOLO / ML outputs
 *.pt
-training_results/
+training_results/*
+!training_results/yolo11_fruits/
+!training_results/yolo11_fruits/**
 unlabeled-data/
 runs/
 .cache/
-
-# Large datasets
-**/images/
-**/labels/
-
-# Notebook checkpoints
-.ipynb_checkpoints/
-.venv/
